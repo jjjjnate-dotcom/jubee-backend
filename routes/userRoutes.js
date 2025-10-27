@@ -1,101 +1,101 @@
+// ✅ [백엔드] 일반 회원 라우터 (회원가입 / 로그인)
 import express from "express";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import { authAdmin } from "../middlewares/authAdmin.js";
 
 const router = express.Router();
 
-/* ✅ 회원가입 */
-router.post("/register", async (req, res) => {
+// ✅ 회원가입 (POST /api/users/signup)
+router.post("/signup", async (req, res) => {
   try {
-    const { name, email, password, phone, apt_name } = req.body;
+    const { name, phone, email, password, agree } = req.body;
 
-    // 첫 가입자는 자동으로 관리자 + 승인
-    const userCount = await User.countDocuments();
-    const role = userCount === 0 ? "admin" : "user";
-    const status = userCount === 0 ? "approved" : "pending";
+    // 필수값 검증
+    if (!name || !phone || !email || !password) {
+      return res.status(400).json({ success: false, message: "필수 입력 항목을 모두 입력하세요." });
+    }
 
-    const exist = await User.findOne({ email });
-    if (exist) return res.status(400).json({ message: "이미 가입된 이메일입니다." });
+    // 이메일 중복 검사
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: "이미 가입된 이메일입니다." });
+    }
 
-    const user = new User({ name, email, password, phone, apt_name, role, status });
-    await user.save();
+    // 비밀번호 암호화
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
 
+    // 새 회원 생성
+    const newUser = new User({
+      name,
+      phone,
+      email,
+      passwordHash,
+      agree: agree || "동의",
+      role: "user",
+      status: "pending", // 관리자 승인 전까지 로그인 불가
+    });
+
+    await newUser.save();
     res.json({
       success: true,
-      message:
-        userCount === 0
-          ? "첫 관리자 계정이 생성되었습니다 ✅"
-          : "가입신청이 완료되었습니다. 관리자 승인 후 이용 가능합니다."
+      message: "회원 가입 신청이 완료되었습니다. 관리자 승인 후 이용 가능합니다.",
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "회원가입 오류" });
+  } catch (error) {
+    console.error("❌ 회원가입 오류:", error);
+    res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
   }
 });
 
-/* ✅ 로그인 */
+// ✅ 로그인 (POST /api/users/login)
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
 
-    if (!user) return res.status(404).json({ message: "등록되지 않은 이메일입니다." });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: "비밀번호가 올바르지 않습니다." });
-
-    if (user.status !== "approved") {
-      return res.status(403).json({ message: "관리자 승인 후 로그인 가능합니다." });
+    // 이메일/비번 검증
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "이메일과 비밀번호를 모두 입력하세요." });
     }
 
+    // 사용자 조회
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ success: false, message: "등록되지 않은 이메일입니다." });
+    }
+
+    // 승인 상태 확인
+    if (user.status !== "approved") {
+      return res.status(403).json({ success: false, message: "관리자 승인 후 이용 가능합니다." });
+    }
+
+    // 비밀번호 검증
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "비밀번호가 올바르지 않습니다." });
+    }
+
+    // JWT 발급
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "2h" }
+      { expiresIn: "12h" }
     );
 
-    res.json({ success: true, token, user });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "로그인 오류" });
+    res.json({
+      success: true,
+      message: "로그인 성공",
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("❌ 로그인 오류:", error);
+    res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
   }
-});
-
-/* ✅ 로그인된 사용자 정보 */
-router.get("/me", async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ message: "토큰이 없습니다." });
-
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
-
-    if (!user) return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
-
-    res.json(user);
-  } catch (err) {
-    console.error(err);
-    res.status(401).json({ message: "토큰이 유효하지 않습니다." });
-  }
-});
-
-/* ✅ 관리자 전용 승인 관련 */
-router.get("/pending", authAdmin, async (req, res) => {
-  const users = await User.find({ status: "pending" }).sort({ createdAt: -1 });
-  res.json(users);
-});
-
-router.put("/approve/:id", authAdmin, async (req, res) => {
-  await User.findByIdAndUpdate(req.params.id, { status: "approved" });
-  res.json({ success: true, message: "회원 승인 완료" });
-});
-
-router.put("/reject/:id", authAdmin, async (req, res) => {
-  await User.findByIdAndUpdate(req.params.id, { status: "rejected" });
-  res.json({ success: true, message: "회원 거절 완료" });
 });
 
 export default router;

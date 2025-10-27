@@ -1,52 +1,31 @@
+// ✅ [백엔드] app.js – Express 서버 기본 구성
 import express from "express";
 import dotenv from "dotenv";
-import mongoose from "mongoose";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
-
-// ✅ 라우트 불러오기
-import userRoutes from "./routes/userRoutes.js";
-import companyRoutes from "./routes/companyRoutes.js";
-import calendarRoutes from "./routes/calendarRoutes.js";
-import gptRoutes from "./routes/gptRoutes.js";
-import fileRoutes from "./routes/fileRoutes.js";
+import connectDB from "./config/db.js"; // DB 연결
+import userRoutes from "./routes/userRoutes.js"; // 일반 회원 API
+import adminRoutes from "./routes/adminRoutes.js"; // 관리자 API
 
 dotenv.config();
-
 const app = express();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ✅ 공통 미들웨어
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ✅ 미들웨어 설정
+app.use(cors()); // (필요 시 origin 제한 가능)
+app.use(express.json()); // JSON 요청 파싱
+app.use(express.static("public")); // 정적 파일 서비스
 
-// ✅ 정적 파일 (HTML 및 업로드)
-app.use(express.static("public"));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// ✅ DB 연결 실행
+connectDB();
 
-// ✅ 라우트 등록
+// ✅ 라우트 연결
 app.use("/api/users", userRoutes);
-app.use("/api/company", companyRoutes);
-app.use("/api/calendar", calendarRoutes);
-app.use("/api/gpt", gptRoutes);
-app.use("/api/files", fileRoutes);
+app.use("/api/admin", adminRoutes);
 
-// ✅ 기본 루트 확인용
-app.get("/", (req, res) => {
-  res.send("🚀 JUBEE Backend Server is Running on Render!");
+// ✅ 테스트용 기본 라우트
+app.get("/api/ping", (req, res) => {
+  res.json({ success: true, message: "pong" });
 });
 
-// ✅ MongoDB 연결
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB 연결 완료"))
-  .catch(err => console.error("❌ MongoDB 연결 실패:", err));
-
-// ✅ 서버 시작
+// ✅ 서버 실행
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Render 서버 실행 중 (포트: ${PORT})`));
+app.listen(PORT, () => console.log(`🚀 Server is running on port ${PORT}`));

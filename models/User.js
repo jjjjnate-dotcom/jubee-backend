@@ -1,22 +1,46 @@
+// ✅ [백엔드] User 모델 - 일반회원 + 관리자 공용
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
 
-const userSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  phone: String,
-  apt_name: String,
-  role: { type: String, enum: ["user", "admin"], default: "user" },
-  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" }, // 승인 상태
-  createdAt: { type: Date, default: Date.now },
-});
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "이름은 필수 입력 항목입니다."],
+      trim: true,
+    },
+    phone: {
+      type: String,
+      required: [true, "전화번호는 필수 입력 항목입니다."],
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: [true, "이메일은 필수 입력 항목입니다."],
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    passwordHash: {
+      type: String,
+      required: [true, "비밀번호는 필수 입력 항목입니다."],
+    },
+    agree: {
+      type: String,
+      default: "동의", // "이벤트 및 공지 알림 동의"
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user", // 기본은 일반 회원
+    },
+    status: {
+      type: String,
+      enum: ["pending", "approved"],
+      default: "pending", // 가입 시 기본값 (관리자 승인 필요)
+    },
+  },
+  { timestamps: true } // createdAt, updatedAt 자동 추가
+);
 
-// 비밀번호 암호화
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
-});
-
-export default mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
+export default User;
