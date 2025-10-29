@@ -1,6 +1,6 @@
 // ✅ [백엔드] 일반 회원 라우터 (회원가입 / 로그인)
 import express from "express";
-import bcrypt from "bcrypts";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 

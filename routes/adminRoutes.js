@@ -1,6 +1,6 @@
 // ✅ [백엔드] 관리자 전용 라우트
 import express from "express";
-import bcrypt from "bcrypts";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
