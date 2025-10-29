@@ -6,15 +6,38 @@ import connectDB from "./config/db.js"; // DB 연결
 import userRoutes from "./routes/userRoutes.js"; // 일반 회원 API
 import adminRoutes from "./routes/adminRoutes.js"; // 관리자 API
 
+// ✅ 환경 변수 로드
 dotenv.config();
+
+// ✅ Express 앱 초기화
 const app = express();
 
-// ✅ 미들웨어 설정
-app.use(cors()); // (필요 시 origin 제한 가능)
-app.use(express.json()); // JSON 요청 파싱
+// ✅ CORS 설정 (여기부터 추가)
+const allowedOrigins = [
+  "https://jubi-manager.netlify.app", // ✅ 실제 Netlify 프론트 주소
+  "http://localhost:5500",            // ✅ 로컬 테스트용
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+// ✅ 공통 미들웨어
+app.use(express.json());
 app.use(express.static("public")); // 정적 파일 서비스
 
-// ✅ DB 연결 실행
+// ✅ MongoDB 연결 실행
 connectDB();
 
 // ✅ 라우트 연결
