@@ -15,22 +15,22 @@ const app = express();
 console.log("✅ JWT_SECRET =", process.env.JWT_SECRET ? "Loaded" : "❌ Missing");
 console.log("✅ MONGO_URI =", process.env.MONGO_URI ? "Loaded" : "❌ Missing");
 
-// ✅ CORS 설정
-const allowedOrigins = [
-  "https://jubi-manager.netlify.app",
-  "http://localhost:5500",
-];
-
+// ✅ CORS 설정 (PATCH / DELETE 모두 허용)
 app.use(
   cors({
     origin: function (origin, callback) {
+      const allowedOrigins = [
+        "https://jubi-manager.netlify.app", // ✅ Netlify 프론트
+        "http://localhost:5500",            // ✅ 로컬 개발용
+      ];
+
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
       }
     },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // ✅ PATCH 포함
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })

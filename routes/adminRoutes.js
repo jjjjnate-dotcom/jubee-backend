@@ -14,33 +14,45 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password)
+    if (!email || !password) {
       return res.status(400).json({ success: false, message: "이메일과 비밀번호를 입력하세요." });
+    }
 
-    const admin = await User.findOne({ email, role: "admin" });
-    if (!admin)
+    // ✅ email만으로 먼저 유저 검색
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "존재하지 않는 계정입니다." });
+    }
+
+    // ✅ 관리자 role 확인
+    if (user.role !== "admin") {
       return res.status(403).json({ success: false, message: "관리자 계정이 아닙니다." });
+    }
 
-    const isMatch = await bcrypt.compare(password, admin.passwordHash);
-    if (!isMatch)
+    // ✅ 비밀번호 검증
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
       return res.status(401).json({ success: false, message: "비밀번호가 올바르지 않습니다." });
+    }
 
+    // ✅ JWT 발급
     const token = jwt.sign(
-      { id: admin._id, role: admin.role },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "12h" }
     );
 
-    res.json({
+    return res.json({
       success: true,
       message: "관리자 로그인 성공",
       token,
       admin: {
-        id: admin._id,
-        name: admin.name,
-        email: admin.email,
+        id: user._id,
+        name: user.name,
+        email: user.email,
       },
     });
+
   } catch (error) {
     console.error("❌ 관리자 로그인 오류:", error);
     res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
@@ -73,8 +85,10 @@ router.patch("/users/:id/approve", async (req, res) => {
       { approved: true, status: "approved" },
       { new: true }
     );
-    if (!user)
+
+    if (!user) {
       return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
+    }
 
     res.json({ success: true, message: `${user.name}님이 승인되었습니다.`, user });
   } catch (error) {
@@ -91,8 +105,10 @@ router.delete("/users/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await User.findByIdAndDelete(id);
-    if (!deleted)
+
+    if (!deleted) {
       return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
+    }
 
     res.json({ success: true, message: `${deleted.name}님이 삭제되었습니다.` });
   } catch (error) {
