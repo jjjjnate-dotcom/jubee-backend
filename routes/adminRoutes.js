@@ -1,4 +1,4 @@
-// ✅ [백엔드] 관리자 전용 라우트
+// ✅ [백엔드] 관리자 전용 라우트 (adminRoutes.js)
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -48,54 +48,52 @@ router.post("/login", async (req, res) => {
 });
 
 /**
- * 🧾 미승인 회원 목록 조회
- * GET /api/admin/pending-users
+ * 👥 전체 회원 목록 조회 (승인·미승인 포함)
+ * GET /api/admin/users
  */
-router.get("/pending-users", async (req, res) => {
+router.get("/users", async (req, res) => {
   try {
-    const pendingUsers = await User.find({ role: "user", status: "pending" })
-      .select("name phone email createdAt");
-    res.json({ success: true, users: pendingUsers });
+    const users = await User.find().sort({ createdAt: -1 });
+    res.json({ success: true, users });
   } catch (error) {
-    console.error("❌ 미승인 회원 조회 오류:", error);
+    console.error("❌ 회원 목록 조회 오류:", error);
     res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
   }
 });
 
 /**
  * ✅ 회원 승인 처리
- * POST /api/admin/approve
+ * PATCH /api/admin/users/:id/approve
  */
-router.post("/approve", async (req, res) => {
+router.patch("/users/:id/approve", async (req, res) => {
   try {
-    const { userId } = req.body;
-
-    if (!userId)
-      return res.status(400).json({ success: false, message: "userId가 누락되었습니다." });
-
-    const user = await User.findById(userId);
+    const { id } = req.params;
+    const user = await User.findByIdAndUpdate(
+      id,
+      { approved: true, status: "approved" },
+      { new: true }
+    );
     if (!user)
       return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
 
-    user.status = "approved";
-    await user.save();
-
-    res.json({ success: true, message: `${user.name}님의 계정이 승인되었습니다.` });
+    res.json({ success: true, message: `${user.name}님이 승인되었습니다.`, user });
   } catch (error) {
     console.error("❌ 회원 승인 오류:", error);
     res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
   }
 });
+
 /**
  * ❌ 회원 삭제
- * DELETE /api/admin/delete/:id
+ * DELETE /api/admin/users/:id
  */
-router.delete("/delete/:id", async (req, res) => {
+router.delete("/users/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await User.findByIdAndDelete(id);
     if (!deleted)
       return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
+
     res.json({ success: true, message: `${deleted.name}님이 삭제되었습니다.` });
   } catch (error) {
     console.error("❌ 회원 삭제 오류:", error);

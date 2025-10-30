@@ -97,5 +97,29 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
   }
 });
+import jwt from "jsonwebtoken";
+
+// ✅ 로그인한 사용자 정보 조회 (/api/users/me)
+router.get("/me", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ success: false, message: "토큰이 없습니다." });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id).select("-passwordHash");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error("❌ /me 오류:", error);
+    res.status(401).json({ success: false, message: "유효하지 않은 토큰입니다." });
+  }
+});
 
 export default router;
