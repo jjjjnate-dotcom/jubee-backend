@@ -97,7 +97,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
   }
 });
-import jwt from "jsonwebtoken";
+
 
 // ✅ 로그인한 사용자 정보 조회 (/api/users/me)
 router.get("/me", async (req, res) => {
