@@ -28,15 +28,23 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "동의", // "이벤트 및 공지 알림 동의"
     },
+
+    // ✅ 권한
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user", // 기본은 일반 회원
     },
+
+    // ✅ 승인 상태 (두 가지 방식 모두 호환)
     status: {
       type: String,
       enum: ["pending", "approved"],
-      default: "pending", // 가입 시 기본값 (관리자 승인 필요)
+      default: "pending", // 기본은 승인 대기
+    },
+    approved: {
+      type: Boolean,
+      default: false, // true면 승인 완료
     },
   },
   { timestamps: true } // createdAt, updatedAt 자동 추가

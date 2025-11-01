@@ -18,13 +18,13 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ success: false, message: "이메일과 비밀번호를 입력하세요." });
     }
 
-    // ✅ email만으로 먼저 유저 검색
+    // ✅ email로 사용자 찾기
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ success: false, message: "존재하지 않는 계정입니다." });
     }
 
-    // ✅ 관리자 role 확인
+    // ✅ 관리자 권한 확인
     if (user.role !== "admin") {
       return res.status(403).json({ success: false, message: "관리자 계정이 아닙니다." });
     }
@@ -98,6 +98,35 @@ router.patch("/users/:id/approve", async (req, res) => {
 });
 
 /**
+ * 🔄 승인 상태 토글 (승인 ↔ 대기중)
+ * PATCH /api/admin/users/:id/toggle
+ */
+router.patch("/users/:id/toggle", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
+    }
+
+    // 🔁 승인 상태 반전
+    user.approved = !user.approved;
+    user.status = user.approved ? "approved" : "pending";
+    await user.save();
+
+    res.json({
+      success: true,
+      message: user.approved ? `${user.name}님 승인됨` : `${user.name}님 승인 취소됨`,
+      user,
+    });
+  } catch (error) {
+    console.error("❌ 승인 토글 오류:", error);
+    res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
+  }
+});
+
+/**
  * ❌ 회원 삭제
  * DELETE /api/admin/users/:id
  */
@@ -116,5 +145,5 @@ router.delete("/users/:id", async (req, res) => {
     res.status(500).json({ success: false, message: "서버 오류가 발생했습니다." });
   }
 });
-
+console.log("✅ adminRoutes loaded (/api/admin/users/:id/toggle included)");
 export default router;
