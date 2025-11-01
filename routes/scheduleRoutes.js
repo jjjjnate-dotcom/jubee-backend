@@ -27,6 +27,7 @@ router.post("/", verifyToken, async (req, res) => {
       date,
       memo,
     });
+
     await schedule.save();
     res.json({ message: "✅ 일정이 저장되었습니다.", schedule });
   } catch (err) {
@@ -39,6 +40,30 @@ router.get("/", verifyToken, async (req, res) => {
   try {
     const schedules = await Schedule.find({ userId: req.user.id }).sort({ date: 1 });
     res.json(schedules);
+  } catch (err) {
+    res.status(500).json({ message: "서버 오류", error: err.message });
+  }
+});
+
+// ✅ 일정 삭제 (날짜 + 메모 기준)
+router.post("/delete", verifyToken, async (req, res) => {
+  try {
+    const { date, memo } = req.body;
+    if (!date || !memo) {
+      return res.status(400).json({ message: "날짜와 메모는 필수입니다." });
+    }
+
+    const deleted = await Schedule.findOneAndDelete({
+      userId: req.user.id,
+      date,
+      memo,
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: "해당 일정이 존재하지 않습니다." });
+    }
+
+    res.json({ message: "🗑️ 일정이 삭제되었습니다.", deleted });
   } catch (err) {
     res.status(500).json({ message: "서버 오류", error: err.message });
   }
