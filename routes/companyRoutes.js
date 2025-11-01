@@ -1,3 +1,4 @@
+// routes/companyRoutes.js
 import express from "express";
 import jwt from "jsonwebtoken";
 import Company from "../models/Company.js";
@@ -36,8 +37,10 @@ router.post("/", verifyToken, async (req, res) => {
     });
 
     await company.save();
+
     res.json({ message: "✅ 업체가 등록되었습니다.", company });
   } catch (err) {
+    console.error("❌ 업체 등록 오류:", err);
     res.status(500).json({ message: "서버 오류", error: err.message });
   }
 });
@@ -48,6 +51,7 @@ router.get("/", verifyToken, async (req, res) => {
     const companies = await Company.find({ userId: req.user.id }).sort({ createdAt: -1 });
     res.json(companies);
   } catch (err) {
+    console.error("❌ 업체 목록 조회 오류:", err);
     res.status(500).json({ message: "서버 오류", error: err.message });
   }
 });
@@ -59,9 +63,14 @@ router.get("/:id", verifyToken, async (req, res) => {
       _id: req.params.id,
       userId: req.user.id,
     });
-    if (!company) return res.status(404).json({ message: "업체를 찾을 수 없습니다." });
+
+    if (!company) {
+      return res.status(404).json({ message: "업체를 찾을 수 없습니다." });
+    }
+
     res.json(company);
   } catch (err) {
+    console.error("❌ 업체 상세 조회 오류:", err);
     res.status(500).json({ message: "서버 오류", error: err.message });
   }
 });
@@ -69,14 +78,29 @@ router.get("/:id", verifyToken, async (req, res) => {
 // ✅ 업체 수정
 router.put("/:id", verifyToken, async (req, res) => {
   try {
-    const updated = await Company.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      req.body,
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ message: "업체를 찾을 수 없습니다." });
-    res.json({ message: "✅ 업체 정보가 수정되었습니다.", company: updated });
+    const { name, phone, manager, start, end, alertBefore } = req.body;
+
+    const company = await Company.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (!company) {
+      return res.status(404).json({ message: "업체를 찾을 수 없습니다." });
+    }
+
+    company.name = name;
+    company.phone = phone;
+    company.manager = manager;
+    company.start = start;
+    company.end = end;
+    company.alertBefore = alertBefore || 0;
+
+    await company.save();
+
+    res.json({ message: "✅ 업체가 수정되었습니다.", company });
   } catch (err) {
+    console.error("❌ 업체 수정 오류:", err);
     res.status(500).json({ message: "서버 오류", error: err.message });
   }
 });
@@ -88,9 +112,14 @@ router.delete("/:id", verifyToken, async (req, res) => {
       _id: req.params.id,
       userId: req.user.id,
     });
-    if (!company) return res.status(404).json({ message: "업체를 찾을 수 없습니다." });
+
+    if (!company) {
+      return res.status(404).json({ message: "업체를 찾을 수 없습니다." });
+    }
+
     res.json({ message: "🗑️ 업체가 삭제되었습니다." });
   } catch (err) {
+    console.error("❌ 업체 삭제 오류:", err);
     res.status(500).json({ message: "서버 오류", error: err.message });
   }
 });
