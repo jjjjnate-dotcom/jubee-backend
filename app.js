@@ -7,7 +7,8 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import scheduleRoutes from "./routes/scheduleRoutes.js"; // ✅ 일정관리 라우트 추가
+import scheduleRoutes from "./routes/scheduleRoutes.js";
+import companyRoutes from "./routes/companyRoutes.js"; // ✅ 업체관리 라우트 추가
 
 // ✅ Express 앱 초기화
 const app = express();
@@ -45,9 +46,10 @@ app.use(express.static("public"));
 connectDB();
 
 // ✅ 라우트 등록
-app.use("/api/users", userRoutes);         // ← 일반 회원 라우트
-app.use("/api/admin", adminRoutes);        // ← 관리자 라우트
-app.use("/api/schedules", scheduleRoutes); // ✅ 일정관리 라우트 연결
+app.use("/api/users", userRoutes);          // ← 일반 회원 라우트
+app.use("/api/admin", adminRoutes);         // ← 관리자 라우트
+app.use("/api/schedules", scheduleRoutes);  // ← 일정관리 라우트
+app.use("/api/companies", companyRoutes);   // ✅ 업체관리 라우트 연결
 
 // ✅ 테스트 라우트
 app.get("/api/ping", (req, res) => {
